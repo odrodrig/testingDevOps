@@ -19,7 +19,7 @@ def serviceAccount = env.SERVICE_ACCOUNT ?: "default"
 // Pod Environment Variables
 def namespace = env.NAMESPACE ?: "default"
 def registry = env.REGISTRY ?: "hub.docker.com"
-def label = "jenkins-slave";
+def label = "jenkins-slaves";
 
 podTemplate(label: label, cloud: cloud, serviceAccount: serviceAccount, namespace: namespace, envVars: [
         envVar(key: 'NAMESPACE', value: namespace),
