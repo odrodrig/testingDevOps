@@ -20,9 +20,7 @@ def serviceAccount = env.SERVICE_ACCOUNT ?: "default"
 def namespace = env.NAMESPACE ?: "default"
 def registry = env.REGISTRY ?: "hub.docker.com"
 
-def label = "mypod-${UUID.randomUUID().toString()}"
-
-podTemplate(label: label, cloud: cloud, serviceAccount: serviceAccount, namespace: namespace, envVars: [
+podTemplate(label: 'mypod', cloud: cloud, serviceAccount: serviceAccount, namespace: namespace, envVars: [
         envVar(key: 'NAMESPACE', value: namespace),
         envVar(key: 'REGISTRY', value: registry)
     ],
@@ -36,7 +34,7 @@ podTemplate(label: label, cloud: cloud, serviceAccount: serviceAccount, namespac
         containerTemplate(name: 'node'   , image: 'node:8', ttyEnabled: true, comand: 'cat')
   ]) {
 
-    node(label) {
+    node('mypod') {
         checkout scm
         container('node') {
             stage('test') {
