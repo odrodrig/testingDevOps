@@ -19,8 +19,9 @@ def serviceAccount = env.SERVICE_ACCOUNT ?: "default"
 // Pod Environment Variables
 def namespace = env.NAMESPACE ?: "default"
 def registry = env.REGISTRY ?: "hub.docker.com"
+def label = "jenkins-slave";
 
-podTemplate(label: 'jenkins-slave', cloud: cloud, serviceAccount: serviceAccount, namespace: namespace, envVars: [
+podTemplate(label: label, cloud: cloud, serviceAccount: serviceAccount, namespace: namespace, envVars: [
         envVar(key: 'NAMESPACE', value: namespace),
         envVar(key: 'REGISTRY', value: registry)
     ],
@@ -34,7 +35,7 @@ podTemplate(label: 'jenkins-slave', cloud: cloud, serviceAccount: serviceAccount
         containerTemplate(name: 'node'   , image: 'node:8', ttyEnabled: true, comand: 'cat')
   ]) {
 
-    node('jenkins-slave') {
+    node(label) {
         checkout scm
         container('node') {
             stage('test') {
