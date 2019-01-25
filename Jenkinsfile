@@ -9,23 +9,8 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-
-
-// Pod Template
-def cloud = env.CLOUD ?: "kubernetes"
-def registryCredsID = env.REGISTRY_CREDENTIALS ?: "registry-credentials-id"
-def serviceAccount = env.SERVICE_ACCOUNT ?: "default"
-
-// Pod Environment Variables
-def namespace = env.NAMESPACE ?: "default"
-def registry = env.REGISTRY ?: "hub.docker.com"
-
-podTemplate(label: 'mypod', cloud: cloud, serviceAccount: serviceAccount, namespace: namespace, envVars: [
-        envVar(key: 'NAMESPACE', value: namespace),
-        envVar(key: 'REGISTRY', value: registry)
-    ],
+podTemplate(label: 'mypod', cloud: 'kubernetes', serviceAccount: 'default', namespace: 'default',
     volumes: [
-        hostPathVolume(hostPath: '/etc/docker/certs.d', mountPath: '/etc/docker/certs.d'),
         hostPathVolume(hostPath: '/var/run/docker.sock', mountPath: '/var/run/docker.sock')
 ],
     containers: [
@@ -54,17 +39,17 @@ podTemplate(label: 'mypod', cloud: cloud, serviceAccount: serviceAccount, namesp
                 #!/bin/bash
                 ls
                 cd nodeApp
-                docker build -t ${env.REGISTRY}/${env.NAMESPACE}/${IMAGE_NAME}:${env.BUILD_NUMBER} .
+                docker build -t ${env.DOCKER_USERNAME}/'jenkins-demo-app':${env.BUILD_NUMBER} .
                 """
             }
             stage('Push Docker Image to Registry') {
-                withCredentials([usernamePassword(credentialsId: registryCredsID,
+                withCredentials([usernamePassword(credentialsId: 'REGISTRY_CREDENTIALS',
                                                usernameVariable: 'USERNAME',
                                                passwordVariable: 'PASSWORD')]) {
                     sh """
                     #!/bin/bash
-                    docker login -u ${USERNAME} -p ${PASSWORD} ${env.REGISTRY}
-                    docker push ${env.REGISTRY}/${env.NAMESPACE}/${env.IMAGE_NAME}:${env.BUILD_NUMBER}
+                    docker login -u ${USERNAME} -p ${PASSWORD}
+                    docker push ${env.DOCKER_USERNAME}/'jenkins-demo-app':${env.BUILD_NUMBER}
                     """
                 }
             }
@@ -77,14 +62,14 @@ podTemplate(label: 'mypod', cloud: cloud, serviceAccount: serviceAccount, namesp
                 echo ${env.BRANCH_NAME}
 
                 if [ ${env.BRANCH_NAME} == 'test' ]; then
-                    DEPLOYMENT=`kubectl --namespace=${env.NAMESPACE} get deployments -l app="${env.APP_NAME}-test" -o name`
+                    DEPLOYMENT=`kubectl --namespace=default get deployments -l app="jenkins-demo-app-test" -o name`
                     echo 'In test branch. Deploying to test env'
-                    kubectl --namespace=${env.NAMESPACE} set image \${DEPLOYMENT} ${env.APP_NAME}=${env.REGISTRY}/${env.NAMESPACE}/${env.IMAGE_NAME}:${env.BUILD_NUMBER}
+                    kubectl --namespace=default set image \${DEPLOYMENT} jenkins-demo-app=${env.DOCKER_USERNAME}/jenkins-demo-app:${env.BUILD_NUMBER}
 
                 elif [ ${env.BRANCH_NAME} == 'master' ]; then
-                    DEPLOYMENT=`kubectl --namespace=${env.NAMESPACE} get deployments -l app=${env.APP_NAME} -o name`
+                    DEPLOYMENT=`kubectl --namespace=default get deployments -l app=jenkins-demo-app -o name`
                     echo 'In master branch. Deploying to prod env'
-                    kubectl --namespace=${env.NAMESPACE} set image \${DEPLOYMENT} ${env.APP_NAME}=${env.REGISTRY}/${env.NAMESPACE}/${env.IMAGE_NAME}:${env.BUILD_NUMBER}
+                    kubectl --namespace=default set image \${DEPLOYMENT} jenkins-demo-app=${env.DOCKER_USERNAME}/jenkins-demo-app:${env.BUILD_NUMBER}
                 else
                     echo "In unexpected branch $env.BRANCH_NAME. Exiting."
                     exit 1
@@ -94,11 +79,11 @@ podTemplate(label: 'mypod', cloud: cloud, serviceAccount: serviceAccount, namesp
                     echo "No deployment to update"
                     echo "Creating deployment"
                     kubectl apply kube/nodeApp.yaml
-                fi
+                fi 
 
 
                 # Update Deployment
-                kubectl --namespace=${env.NAMESPACE} rollout status \${DEPLOYMENT}
+                kubectl --namespace=default rollout status \${DEPLOYMENT}
                 """
             }
         }
